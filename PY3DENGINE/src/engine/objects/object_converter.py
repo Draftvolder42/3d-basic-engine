@@ -15,7 +15,7 @@ class Convert3DModelToVertices(ObjectConverter):
         self.camera = camera
 
 
-    def project_vertices(self, obj):
+    def convert(self, obj):
         camera_vec = np.array(self.camera.vector.get_vertex_data())
         vertices = np.array(obj.get_vertex_data())  
         delta_XYZ = vertices - camera_vec 

@@ -95,7 +95,7 @@ def main():
         a = 0.01
         hexogen3d.transform(rotate_x(a)@rotate_y(a)@rotate_z(a))
 
-        openGLRenderManager.renderable_queue.vertices.enqueue(0, 0, converter.project_vertices(hexogen3d), COLOR_SHADER)
+        openGLRenderManager.renderable_queue.vertices.enqueue(0, 0, converter.convert(hexogen3d), COLOR_SHADER)
         
         openGLRenderManager.renderable_queue.text.enqueue(0-cx, 0+cy, text, TEXT_SHADER)
 

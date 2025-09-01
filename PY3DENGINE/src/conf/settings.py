@@ -13,11 +13,11 @@ class RenderSettings:
 
 
 class TextureSettings:
-    PATH = r"C:\Users\Draftvolder42\Documents\VSCODE\python\general\3d-basic-engine\PY3DENGINE\data\Textures"
+    PATH = r"C:\python\general\3d basic engine\PY3DENGINE\data\Textures"
 
 
 class ModelSettings:
-    PATH = r"C:\Users\Draftvolder42\Documents\VSCODE\python\general\3d-basic-engine\PY3DENGINE\data\Models"
+    PATH = r"C:\python\general\3d basic engine\PY3DENGINE\data\Models"
 
 
 class CameraSettings:
