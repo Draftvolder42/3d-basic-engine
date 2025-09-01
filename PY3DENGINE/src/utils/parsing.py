@@ -16,7 +16,11 @@ def parse_obj(file_path):
                 vertices.append(vertex)
             
             elif parts[0] == 'f':
-                face = [int(idx.split('/')[0]) - 1 for idx in parts[1:]]
-                faces.append(face)
+                face = [vertices[int(idx.split('/')[0]) - 1] for idx in parts[1:]]
+                faces.extend(face)
                 
-    return np.array(vertices), np.array(faces)
+    #return np.array(vertices), np.array(faces)
+    print(faces)
+    print("\n")
+    print(vertices)
+    return np.array(faces)

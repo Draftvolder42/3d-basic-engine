@@ -13,7 +13,11 @@ class RenderSettings:
 
 
 class TextureSettings:
-    PATH = r"C:\python\general\assimilation and selection opengl\assimilation_and_selection_opengl\data\textures"
+    PATH = r"C:\Users\Draftvolder42\Documents\VSCODE\python\general\3d-basic-engine\PY3DENGINE\data\Textures"
+
+
+class ModelSettings:
+    PATH = r"C:\Users\Draftvolder42\Documents\VSCODE\python\general\3d-basic-engine\PY3DENGINE\data\Models"
 
 
 class CameraSettings:

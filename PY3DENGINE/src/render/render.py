@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from PY3DENGINE.src.render.constants import RenderConstants
+from PY3DENGINE.src.render.renderable_queues import OpenGLRenderableQueue
 from OpenGL.GL import *
 import numpy as np
 import pygame
@@ -22,32 +23,6 @@ class BuffersHolder(ABC):
         pass
 
 
-class RenderableQueue(ABC):
-    @abstractmethod
-    def enqueue(self, item):
-        pass
-
-
-    @abstractmethod
-    def dequeue(self):
-        pass
-
-
-    @abstractmethod
-    def is_empty(self):
-        pass
-
-
-    @abstractmethod
-    def size(self):
-        pass
-
-
-    @abstractmethod
-    def clear(self):
-        pass
-
-
 class RenderManager(ABC):
     @abstractmethod
     def render_queue(self, *args):
@@ -57,103 +32,6 @@ class RenderManager(ABC):
     @abstractmethod
     def clear_queue(self, *args):
         pass
-
-
-class TextureQueue(RenderableQueue):
-    def __init__(self):
-        self.texture_queue = dict()
-
-    
-    def enqueue(self, x, y, texture_obj, shader):
-        self.texture_queue[(x, y)] = (texture_obj, shader)
-
-
-    def dequeue(self):
-        if self.is_empty():
-            raise IndexError("Очередь пуста")
-        coords, data = self.texture_queue.popitem()
-        x, y = coords
-        texture_obj, shader = data
-        return x, y, texture_obj.texture, texture_obj.size, shader
-
-
-    def is_empty(self):
-        return len(self.texture_queue) == 0
-    
-
-    def size(self):
-        return len(self.texture_queue)
-
-
-    def clear(self):
-        self.texture_queue.clear()
-
-
-class VerticesQueue(RenderableQueue):
-    def __init__(self):
-        self.vertices_queue = dict()
-
-    
-    def enqueue(self, x, y, vertices_obj, shader):
-        self.vertices_queue[(x, y)] = (vertices_obj, shader)
-
-
-    def dequeue(self):
-        if self.is_empty():
-            raise IndexError("Очередь пуста")
-        coords, data = self.vertices_queue.popitem()
-        x, y = coords
-        vertices_obj, shader = data
-        return x, y, vertices_obj.vertices, vertices_obj.size, vertices_obj.color, shader
-    
-
-    def is_empty(self):
-        return len(self.vertices_queue) == 0
-    
-
-    def size(self):
-        return len(self.vertices_queue)
-
-
-    def clear(self):
-        self.vertices_queue.clear()
-
-
-class TextQueue(RenderableQueue):
-    def __init__(self):
-        self.vertices_queue = dict()
-
-    
-    def enqueue(self, x, y, text_obj, shader):
-        self.vertices_queue[(x, y)] = (text_obj, shader)
-
-
-    def dequeue(self):
-        if self.is_empty():
-            raise IndexError("Очередь пуста")
-        coords, data = self.vertices_queue.popitem()
-        x, y = coords
-        text_obj, shader = data
-        return x, y, text_obj.text, text_obj.color, text_obj.font, shader
-    
-
-    def is_empty(self):
-        return len(self.vertices_queue) == 0
-    
-
-    def size(self):
-        return len(self.vertices_queue)
-
-
-    def clear(self):
-        self.vertices_queue.clear()
-
-
-class OpenGLRenderableQueue:
-    def __init__(self):
-        self.texture = TextureQueue()
-        self.vertices = VerticesQueue()
-        self.text = TextQueue()
 
 
 class OpenGLBuffersHolder:
@@ -384,18 +262,21 @@ class OpenGLBatchRender(Render):
             self.draw_texture(self.renderable_queue.texture)
         while not self.renderable_queue.vertices.is_empty():
             #coming soon
-            x, y, vertices, size, color, shader = self.renderable_queue.vertices.dequeue()
-            self.draw_vertices(x, y, vertices, shader, self.screen_size, len(vertices), size, color)
+            x, y, vertices_obj, shader = self.renderable_queue.vertices.dequeue()
+            self.draw_vertices(x, y, vertices_obj.vertices, shader, self.screen_size, len(vertices_obj.vertices), vertices_obj.size, vertices_obj.color)
         while not self.renderable_queue.text.is_empty():
             #coming soons
-            x, y, text, color, font, shader = self.renderable_queue.text.dequeue()
-            self.draw_text(x, y, text, shader, self.screen_size, font, 4, color)
+            x, y, text_obj, shader = self.renderable_queue.text.dequeue()
+            self.draw_text(x, y, text_obj.text, shader, self.screen_size, text_obj.font, 4, text_obj.color)
 
 
     def draw_texture(self, texture_queue):
         texture_batches = {}
         while not texture_queue.is_empty():
-            x, y, texture, texture_size, shader = texture_queue.dequeue()
+            x, y, texture_obj, shader = texture_queue.dequeue()
+            texture = texture_obj.texture
+            texture_size = texture_obj.size
+
             key = (shader.shader, texture)
             if key not in texture_batches:
                 texture_batches[key] = []
@@ -457,6 +338,7 @@ class OpenGLBatchRender(Render):
         #h = size[1] / screen_size[1]
 
         #vertices = np.array(vertices, dtype=np.float32)
+        #print(vertices, len(vertices))
         glBindVertexArray(vao)
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
@@ -468,7 +350,53 @@ class OpenGLBatchRender(Render):
 
         glBindVertexArray(0)
 
-    
+
+    def draw_faces(self, x, y, vertices, shader, screen_size, num_vertices=3, size=(1, 1), color=(1, 1, 1, 1)):
+        #print(vertices)
+        if num_vertices not in self.buffers_holder.vertices_buffer:
+            self.buffers_holder.new_vertices_buffer(num_vertices)
+        
+        vao, vbo = self.buffers_holder.vertices_buffer[num_vertices]
+
+        vertices = np.array(vertices, dtype=np.float32)
+
+        glBindVertexArray(vao)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
+
+        glUseProgram(shader.shader)
+        
+        glUniform4f(shader.uColorLocation, *color)
+        glDrawArrays(GL_TRIANGLES, 0, num_vertices)
+        #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        #glUniform4f(shader.uColorLocation, *(1, 1, 1, 1))
+        #glDrawArrays(GL_TRIANGLES, 0, num_vertices)
+
+        glBindVertexArray(0)
+
+
+    def draw_faces_lines(self, x, y, vertices, shader, screen_size, num_vertices=3, size=(1, 1), color=(1, 1, 1, 1)):
+        #print(vertices)
+        if num_vertices not in self.buffers_holder.vertices_buffer:
+            self.buffers_holder.new_vertices_buffer(num_vertices)
+        
+        vao, vbo = self.buffers_holder.vertices_buffer[num_vertices]
+
+        vertices = np.array(vertices, dtype=np.float32)
+
+        glBindVertexArray(vao)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.nbytes, vertices)
+
+        glUseProgram(shader.shader)
+        
+        glUniform4f(shader.uColorLocation, *(0, 0, 0, 1))
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        glDrawArrays(GL_TRIANGLES, 0, num_vertices)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+        glBindVertexArray(0)
+
     def draw_text(self, x, y, text, shader, screen_size, font, num_vertices=4, color = (1, 1, 1, 1)):
         if num_vertices not in self.buffers_holder.texture_buffer:
             self.buffers_holder.new_texture_buffer(num_vertices)
